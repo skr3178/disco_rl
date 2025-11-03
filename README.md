@@ -1,93 +1,53 @@
-# DiscoRL: Discovering State-of-the-art Reinforcement Learning Algorithms
+⚙️ How It Works
 
-This repository contains accompanying code for the *"Discovering
- State-of-the-art Reinforcement Learning Algorithms"* Nature publication.
+The system has two learning levels:
 
-It provides a minimal JAX harness for the DiscoRL setup together with the
- original meta-learned weights for the *Disco103* discovered update rule.
+Agent level (inner loop):
+Each agent interacts with its environment and updates itself using a current RL rule.
 
-The harness supports both:
+Meta level (outer loop):
+The system learns the RL rule itself — it updates the parameters of the “RL rule network” (called the meta-network) based on how much reward the agents achieve.
 
--   **Meta-evaluation**: training an agent using the *Disco103* discovered RL
-    update rule, using the `colabs/eval.ipynb` notebook [![Open In](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/google-deepmind/disco_rl/blob/master/colabs/eval.ipynb) and
+So, the RL update rule (normally hard-coded by humans) is instead a neural network learned by meta-gradient optimization.
 
--   **Meta-training**: meta-learning a RL update rule from scratch or from a
-    pre-existing checkpoint, using the `colabs/meta_train.ipynb` notebook [![Open In](https://colab.research.google.com/assets/colab-badge.svg)](https://colab.research.google.com/github/google-deepmind/disco_rl/blob/master/colabs/meta_train.ipynb)
+🧩 Agent Components
 
-Note that it will not be actively maintained moving forward.
+Each agent outputs:
 
-## Installation
+A policy (π)
 
-Set up a Python virtual environment and install the package:
+State-based predictions y(s)
 
-```bash
-python3 -m venv disco_rl_venv
-source disco_rl_venv/bin/activate
-pip install git+https://github.com/google-deepmind/disco_rl.git
-```
+Action-based predictions z(s,a)
 
-The package can also be installed from colab:
+Optional predefined predictions (value function q(s,a), auxiliary policy p(s,a))
 
-```bash
-!pip install git+https://github.com/google-deepmind/disco_rl.git
-```
+These predictions are flexible — they can represent anything useful the meta-network discovers (e.g., analogs of values, advantages, or new internal quantities).
 
-## Usage
+🧮 Meta-Network (the discovered RL rule)
 
-The code is structured as follows:
+The meta-network:
 
-* `environments/` contains the general interface for the environments that can
-  be used with the provided harness, and two implementations of `Catch`:
-  a CPU-based one and jittable;
+Takes trajectories (sequences of predictions, policies, rewards)
 
-* `networks/` includes a simple MLP network and LSTM-based components of the
-  DiscoRL models, all implemented in Haiku;
+Uses an LSTM to process future and past steps
 
-* `update_rules/` has implementations of the discovered rules, actor-critic, and
-  policy gradient;
+Outputs targets for all agent outputs (policy, y, z, etc.)
 
-* `value_fns/` contains value-function related utilities;
+The agent then updates itself to minimize the KL divergence between its outputs and these targets.
 
-* `types.py`, `utils.py`, `optimizers.py` implement a basic functionality for
-  the harness;
+🔁 Meta-Optimization
 
-* `agent.py` is a generic implementation of an RL agent which uses the update
-  rule's API for training, hence it is compatible with all the rules from
-  `update_rules/`.
+The goal is to maximize the total reward of all agents using the discovered rule.
 
-Detailed examples of usage can be found in the colabs above.
+Mathematically:
 
-## Citation
+∇_η J(η) ≈ E_{E,θ} [∇_η θ ∇_θ J(θ)]
 
-Please cite the original Nature paper:
+where:
 
-```
-@Article{DiscoRL2025,
-  author  = {Oh, Junhyuk and Farquhar, Greg and Kemaev, Iurii and Calian, Dan A. and Hessel, Matteo and Zintgraf, Luisa and Singh, Satinder and van Hasselt, Hado and Silver, David},
-  journal = {Nature},
-  title   = {Discovering State-of-the-art Reinforcement Learning Algorithms},
-  year    = {2025},
-  doi     = {10.1038/s41586-025-09761-x}
-}
-```
+- J(η): meta-objective (total reward)
+- η: meta-network parameters
+- θ: agent parameters
 
-## License and disclaimer
-
-Copyright 2025 Google LLC
-
-All software is licensed under the Apache License, Version 2.0 (Apache 2.0);
-you may not use this file except in compliance with the Apache 2.0 license.
-You may obtain a copy of the Apache 2.0 license at:
-https://www.apache.org/licenses/LICENSE-2.0
-
-All other materials are licensed under the Creative Commons Attribution 4.0
-International License (CC-BY). You may obtain a copy of the CC-BY license at:
-https://creativecommons.org/licenses/by/4.0/legalcode
-
-Unless required by applicable law or agreed to in writing, all software and
-materials distributed here under the Apache 2.0 or CC-BY licenses are
-distributed on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND,
-either express or implied. See the licenses for the specific language governing
-permissions and limitations under those licenses.
-
-This is not an official Google product.
+They use meta-gradients to update η — i.e., backpropagation through the agent learning process.
