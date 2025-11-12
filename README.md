@@ -1,3 +1,11 @@
+# To do next
+
+- Create a symbolic link /training is faster with symbolic link
+- 
+- Train with the disco-rl weights
+- 
+
+
 ⚙️ How It Works
 
 The system has two learning levels:
